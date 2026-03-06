@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
+            // Correct initialization for AndroidViewModel
             val notificationViewModel: NotificationViewModel = viewModel()
             NSAPPTheme(darkTheme = notificationViewModel.isDarkMode) {
                 MainScreen(notificationViewModel)

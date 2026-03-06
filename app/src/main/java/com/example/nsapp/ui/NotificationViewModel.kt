@@ -1,12 +1,17 @@
 package com.example.nsapp.ui
 
 import android.app.AlarmManager
+import android.app.Application
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.compose.runtime.*
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.nsapp.data.AppDatabase
+import com.example.nsapp.data.NotificationEntity
 import com.example.nsapp.utils.NotificationReceiver
+import kotlinx.coroutines.launch
 import java.util.*
 
 data class AppNotification(
@@ -27,7 +32,10 @@ data class PriorityLevelState(
     var isEnabled: Boolean
 )
 
-class NotificationViewModel : ViewModel() {
+class NotificationViewModel(application: Application) : AndroidViewModel(application) {
+    private val db = AppDatabase.getDatabase(application)
+    private val dao = db.notificationDao()
+
     private val _notifications = mutableStateListOf<AppNotification>()
     val notifications: List<AppNotification> get() = _notifications
 
@@ -50,10 +58,22 @@ class NotificationViewModel : ViewModel() {
         PriorityLevelState("Low", "Silent in background", 0xFF388E3C, false)
     )
 
+    init {
+        // Load notifications from database on startup
+        viewModelScope.launch {
+            dao.getAllNotifications().collect { entities ->
+                _notifications.clear()
+                _notifications.addAll(entities.map { it.toAppNotification() })
+            }
+        }
+    }
+
     fun addNotification(notification: AppNotification, context: Context) {
         if (areNotificationsEnabled) {
-            _notifications.add(notification)
-            scheduleSystemAlert(notification, context)
+            viewModelScope.launch {
+                dao.insertNotification(notification.toEntity())
+                scheduleSystemAlert(notification, context)
+            }
         }
     }
 
@@ -71,26 +91,20 @@ class NotificationViewModel : ViewModel() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(
-                AlarmManager.RTC_WAKEUP,
-                notification.triggerTimeMs,
-                pendingIntent
-            )
-        } else {
-            alarmManager.setExact(
-                AlarmManager.RTC_WAKEUP,
-                notification.triggerTimeMs,
-                pendingIntent
-            )
-        }
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            notification.triggerTimeMs,
+            pendingIntent
+        )
     }
 
     fun deleteNotification(notificationId: String, context: Context) {
         val notification = _notifications.find { it.id == notificationId }
         notification?.let {
-            cancelAlarm(it, context)
-            _notifications.remove(it)
+            viewModelScope.launch {
+                cancelAlarm(it, context)
+                dao.deleteById(it.id)
+            }
         }
     }
 
@@ -117,29 +131,18 @@ class NotificationViewModel : ViewModel() {
 
     fun scheduleDailyReminder(context: Context) {
         if (registrationTimeInMillis == 0L) return
-
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
         val intent = Intent(context, NotificationReceiver::class.java).apply {
             putExtra("title", "Daily Reminder")
             putExtra("message", "Time to check your NotifySync schedule!")
         }
-
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            999,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        alarmManager.setRepeating(
-            AlarmManager.RTC_WAKEUP,
-            registrationTimeInMillis,
-            AlarmManager.INTERVAL_DAY,
-            pendingIntent
-        )
+        val pendingIntent = PendingIntent.getBroadcast(context, 999, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP, registrationTimeInMillis, AlarmManager.INTERVAL_DAY, pendingIntent)
     }
 
-    fun logout() {
-        isLoggedIn = false
-    }
+    fun logout() { isLoggedIn = false }
+
+    // Mapper functions
+    private fun NotificationEntity.toAppNotification() = AppNotification(id, title, message, time, date, priority, triggerTimeMs, isSent)
+    private fun AppNotification.toEntity() = NotificationEntity(id, title, message, time, date, priority, triggerTimeMs, isSent)
 }
