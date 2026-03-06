@@ -14,13 +14,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nsapp.ui.NotificationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(navController: NavController) {
-    var darkMode by remember { mutableStateOf(false) }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-
+fun SettingsScreen(navController: NavController, viewModel: NotificationViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -39,37 +37,54 @@ fun SettingsScreen(navController: NavController) {
                 .padding(padding)
         ) {
             item {
-                SettingsCategoryHeader("General")
+                SettingsCategoryHeader("App Experience")
                 SettingsToggleItem(
                     title = "Dark Mode",
                     icon = Icons.Default.DarkMode,
-                    checked = darkMode,
-                    onCheckedChange = { darkMode = it }
+                    checked = viewModel.isDarkMode,
+                    onCheckedChange = { viewModel.isDarkMode = it }
                 )
                 SettingsToggleItem(
-                    title = "Notifications",
+                    title = "Notifications Enabled",
                     icon = Icons.Default.Notifications,
-                    checked = notificationsEnabled,
-                    onCheckedChange = { notificationsEnabled = it }
+                    checked = viewModel.areNotificationsEnabled,
+                    onCheckedChange = { viewModel.areNotificationsEnabled = it }
                 )
                 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 
-                SettingsCategoryHeader("Account")
-                SettingsClickItem("Profile Settings", Icons.Default.Person) { /* Navigate to Profile */ }
-                SettingsClickItem("Security & Privacy", Icons.Default.Security) { /* Navigate to Security */ }
+                SettingsCategoryHeader("Information & Guidance")
+                SettingsClickItem("About Notifications", Icons.Default.Info) { 
+                    navController.navigate("about_notifications") 
+                }
+                SettingsClickItem("Help & Support", Icons.Default.Help) { 
+                    navController.navigate("help_support") 
+                }
                 
                 Divider(modifier = Modifier.padding(vertical = 8.dp))
                 
-                SettingsCategoryHeader("About")
-                SettingsClickItem("Help & Support", Icons.Default.Help) { /* Navigate to Help */ }
-                SettingsClickItem("About NotifySync", Icons.Default.Info) { /* Navigate to About */ }
+                SettingsCategoryHeader("Security & Account")
+                SettingsClickItem("Profile Settings", Icons.Default.Person) { 
+                    navController.navigate("profile_settings") 
+                }
+                SettingsClickItem("Security & Privacy", Icons.Default.Security) { 
+                    navController.navigate("security_privacy") 
+                }
+                
+                Divider(modifier = Modifier.padding(vertical = 8.dp))
+                
+                SettingsCategoryHeader("Session")
+                SettingsClickItem("Logout", Icons.Default.Logout) { 
+                    navController.navigate("login") {
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
                 
                 Spacer(modifier = Modifier.height(32.dp))
                 
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Version 1.0.0",
+                        text = "NotifySync v1.0.0",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.outline
                     )

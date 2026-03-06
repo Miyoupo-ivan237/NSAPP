@@ -6,9 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
@@ -23,26 +22,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
-data class AppNotification(
-    val id: Int,
-    val title: String,
-    val message: String,
-    val time: String,
-    val status: NotificationStatus
-)
-
-enum class NotificationStatus { SENT, PENDING, FAILED }
+import com.example.nsapp.ui.NotificationViewModel
+import com.example.nsapp.ui.AppNotification
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationListScreen(navController: NavController) {
-    val notifications = listOf(
-        AppNotification(1, "System Update", "Your system is up to date with the latest security patch.", "2m ago", NotificationStatus.SENT),
-        AppNotification(2, "Meeting Reminder", "Strategy meeting starts in 15 minutes.", "15m ago", NotificationStatus.SENT),
-        AppNotification(3, "Alert", "High CPU usage detected on Server A.", "3h ago", NotificationStatus.FAILED),
-        AppNotification(4, "Daily Sync", "Scheduled daily report generation.", "Tomorrow", NotificationStatus.PENDING)
-    )
+fun NotificationListScreen(navController: NavController, viewModel: NotificationViewModel) {
+    val notifications = viewModel.notifications
 
     Scaffold(
         topBar = {
@@ -50,7 +36,7 @@ fun NotificationListScreen(navController: NavController) {
                 title = { Text("Notification History", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
@@ -61,24 +47,35 @@ fun NotificationListScreen(navController: NavController) {
             )
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .background(MaterialTheme.colorScheme.background)
         ) {
-            item {
-                Text(
-                    "Recent Activity",
-                    modifier = Modifier.padding(16.dp),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-            items(notifications) { notification ->
-                EnhancedNotificationItem(notification)
-                Divider(modifier = Modifier.padding(horizontal = 16.dp), thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+            Text(
+                "Recent Activity",
+                modifier = Modifier.padding(16.dp),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            if (notifications.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No history yet", color = MaterialTheme.colorScheme.outline)
+                }
+            } else {
+                LazyColumn {
+                    items(notifications) { notification ->
+                        EnhancedNotificationItem(notification)
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                            thickness = 0.5.dp,
+                            color = MaterialTheme.colorScheme.outlineVariant
+                        )
+                    }
+                }
             }
         }
     }
@@ -96,13 +93,13 @@ fun EnhancedNotificationItem(notification: AppNotification) {
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
-                .background(getStatusBackgroundColor(notification.status)),
+                .background(getStatusBackgroundColor(notification.isSent)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = getStatusIcon(notification.status),
+                imageVector = getStatusIcon(notification.isSent),
                 contentDescription = null,
-                tint = getStatusColor(notification.status),
+                tint = getStatusColor(notification.isSent),
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -141,21 +138,14 @@ fun EnhancedNotificationItem(notification: AppNotification) {
 }
 
 @Composable
-fun getStatusColor(status: NotificationStatus): Color {
-    return when (status) {
-        NotificationStatus.SENT -> Color(0xFF388E3C)
-        NotificationStatus.PENDING -> Color(0xFF1976D2)
-        NotificationStatus.FAILED -> Color(0xFFD32F2F)
-    }
+fun getStatusColor(isSent: Boolean): Color {
+    return if (isSent) Color(0xFF388E3C) else Color(0xFF1976D2)
 }
 
 @Composable
-fun getStatusBackgroundColor(status: NotificationStatus): Color {
-    return getStatusColor(status).copy(alpha = 0.12f)
+fun getStatusBackgroundColor(isSent: Boolean): Color {
+    return getStatusColor(isSent).copy(alpha = 0.12f)
 }
 
-fun getStatusIcon(status: NotificationStatus): ImageVector = when (status) {
-    NotificationStatus.SENT -> Icons.Default.DoneAll
-    NotificationStatus.PENDING -> Icons.Default.Schedule
-    NotificationStatus.FAILED -> Icons.Default.Notifications
-}
+fun getStatusIcon(isSent: Boolean): ImageVector = 
+    if (isSent) Icons.Default.DoneAll else Icons.Default.Schedule

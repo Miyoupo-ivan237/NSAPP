@@ -1,10 +1,12 @@
 package com.example.nsapp.ui.screens
 
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Schedule
@@ -12,18 +14,60 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nsapp.ui.NotificationViewModel
+import com.example.nsapp.ui.AppNotification
+import java.util.*
+import java.text.SimpleDateFormat
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CreateNotificationScreen(navController: NavController) {
+fun CreateNotificationScreen(navController: NavController, viewModel: NotificationViewModel) {
+    val context = LocalContext.current
+    val calendar = remember { Calendar.getInstance() }
+    
+    val dateFormatter = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+    val timeFormatter = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
+
     var title by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     var selectedPriority by remember { mutableStateOf("Normal") }
+    var selectedDate by remember { mutableStateOf(dateFormatter.format(calendar.time)) }
+    var selectedTime by remember { mutableStateOf(timeFormatter.format(calendar.time)) }
+    
     val priorities = listOf("Low", "Normal", "High", "Urgent")
+
+    // Date Picker Dialog
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _, year, month, dayOfMonth ->
+            calendar.set(Calendar.YEAR, year)
+            calendar.set(Calendar.MONTH, month)
+            calendar.set(Calendar.DAY_OF_MONTH, dayOfMonth)
+            selectedDate = dateFormatter.format(calendar.time)
+        },
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
+    )
+
+    // Time Picker Dialog
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, hourOfDay, minute ->
+            calendar.set(Calendar.HOUR_OF_DAY, hourOfDay)
+            calendar.set(Calendar.MINUTE, minute)
+            calendar.set(Calendar.SECOND, 0)
+            selectedTime = timeFormatter.format(calendar.time)
+        },
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        false
+    )
 
     Scaffold(
         topBar = {
@@ -31,7 +75,7 @@ fun CreateNotificationScreen(navController: NavController) {
                 title = { Text("New Notification", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -45,7 +89,6 @@ fun CreateNotificationScreen(navController: NavController) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Header Icon
             Box(
                 modifier = Modifier.fillMaxWidth(),
                 contentAlignment = Alignment.Center
@@ -101,41 +144,61 @@ fun CreateNotificationScreen(navController: NavController) {
                 }
             }
 
-            Divider()
+            HorizontalDivider()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 OutlinedButton(
-                    onClick = { /* Open Date Picker */ },
+                    onClick = { datePickerDialog.show() },
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.Default.DateRange, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Select Date")
+                    Text(selectedDate)
                 }
                 OutlinedButton(
-                    onClick = { /* Open Time Picker */ },
+                    onClick = { timePickerDialog.show() },
                     modifier = Modifier.weight(1f),
                     shape = MaterialTheme.shapes.medium
                 ) {
                     Icon(Icons.Default.Schedule, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Select Time")
+                    Text(selectedTime)
                 }
             }
 
             Button(
-                onClick = { /* Save Notification */ },
+                onClick = { 
+                    if (title.isNotEmpty() && message.isNotEmpty() && viewModel.areNotificationsEnabled) {
+                        viewModel.addNotification(
+                            AppNotification(
+                                title = title,
+                                message = message,
+                                priority = selectedPriority,
+                                date = selectedDate,
+                                time = selectedTime,
+                                triggerTimeMs = calendar.timeInMillis
+                            ),
+                            context
+                        )
+                        navController.popBackStack()
+                    }
+                },
+                enabled = viewModel.areNotificationsEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp)
                     .padding(top = 16.dp),
                 shape = MaterialTheme.shapes.large
             ) {
-                Text("Schedule Notification", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                if (!viewModel.areNotificationsEnabled) {
+                    Text("Notifications Disabled in Settings", fontSize = 14.sp)
+                } else {
+                    Text("Schedule Notification", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }

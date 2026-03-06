@@ -11,19 +11,28 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nsapp.ui.NotificationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LoginScreen(navController: NavController) {
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(navController: NavController, viewModel: NotificationViewModel) {
+    // Sync local state with current registered info from ViewModel
+    var email by remember { mutableStateOf(viewModel.userEmail) }
+    var password by remember { mutableStateOf(viewModel.userPassword) }
+    
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+
+    fun validateEmail(email: String): Boolean {
+        // More flexible check: allows exp.@gmail.com
+        return email.contains("@") && email.contains(".")
+    }
 
     Box(
         modifier = Modifier
@@ -53,8 +62,13 @@ fun LoginScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { 
+                    email = it
+                    emailError = null
+                },
                 label = { Text("Email Address") },
+                isError = emailError != null,
+                supportingText = { emailError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -64,31 +78,43 @@ fun LoginScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { 
+                    password = it
+                    passwordError = null
+                },
                 label = { Text("Password") },
+                isError = passwordError != null,
+                supportingText = { passwordError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
             )
 
-            Text(
-                text = "Forgot Password?",
-                modifier = Modifier
-                    .align(Alignment.End)
-                    .padding(top = 8.dp)
-                    .clickable { /* Handle forgot password */ },
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { navController.navigate("home") {
-                    popUpTo("login") { inclusive = true }
-                } },
+                onClick = { 
+                    val isEmailValid = validateEmail(email)
+                    val isPasswordEmpty = password.isEmpty()
+
+                    if (!isEmailValid) {
+                        emailError = "Please enter a valid email (e.g., exp.@gmail.com)"
+                    } else if (isPasswordEmpty) {
+                        passwordError = "Password cannot be empty"
+                    } else {
+                        // Check against the stored user data in ViewModel
+                        if (email.trim().lowercase() == viewModel.userEmail.trim().lowercase() && 
+                            password == viewModel.userPassword) {
+                            viewModel.isLoggedIn = true
+                            navController.navigate("home") {
+                                popUpTo("login") { inclusive = true }
+                            }
+                        } else {
+                            emailError = "Incorrect email or password"
+                        }
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
@@ -98,16 +124,16 @@ fun LoginScreen(navController: NavController) {
                 Text("Login", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
-            Row(
-                modifier = Modifier.padding(top = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Don't have an account? ")
+            if (viewModel.userEmail.isEmpty()) {
+                TextButton(onClick = { navController.navigate("signup") }) {
+                    Text("Don't have an account? Sign Up")
+                }
+            } else {
+                Spacer(modifier = Modifier.height(16.dp))
                 Text(
-                    text = "Sign Up",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { navController.navigate("signup") }
+                    text = "Current Registered: ${viewModel.userEmail}",
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.outline
                 )
             }
         }

@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,27 +16,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
-data class PriorityLevel(
-    val name: String,
-    val description: String,
-    val color: Color,
-    val isEnabled: Boolean
-)
+import com.example.nsapp.ui.NotificationViewModel
+import com.example.nsapp.ui.PriorityLevelState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PrioritySettingsScreen(navController: NavController) {
-    var priorities by remember {
-        mutableStateOf(
-            listOf(
-                PriorityLevel("Urgent", "Immediate notification with sound and vibration", Color(0xFFD32F2F), true),
-                PriorityLevel("High", "Important notification with sound", Color(0xFFF57C00), true),
-                PriorityLevel("Normal", "Standard notification behavior", Color(0xFF1976D2), true),
-                PriorityLevel("Low", "Silent notification in the background", Color(0xFF388E3C), false)
-            )
-        )
-    }
+fun PrioritySettingsScreen(navController: NavController, viewModel: NotificationViewModel) {
+    val priorities = viewModel.priorities
 
     Scaffold(
         topBar = {
@@ -44,7 +30,7 @@ fun PrioritySettingsScreen(navController: NavController) {
                 title = { Text("Priority Settings", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 }
             )
@@ -79,9 +65,7 @@ fun PrioritySettingsScreen(navController: NavController) {
             ) {
                 items(priorities) { priority ->
                     PriorityItem(priority) { isChecked ->
-                        priorities = priorities.map {
-                            if (it.name == priority.name) it.copy(isEnabled = isChecked) else it
-                        }
+                        viewModel.updatePriority(priority.name, isChecked)
                     }
                 }
             }
@@ -90,7 +74,7 @@ fun PrioritySettingsScreen(navController: NavController) {
 }
 
 @Composable
-fun PriorityItem(priority: PriorityLevel, onCheckedChange: (Boolean) -> Unit) {
+fun PriorityItem(priority: PriorityLevelState, onCheckedChange: (Boolean) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
@@ -107,7 +91,7 @@ fun PriorityItem(priority: PriorityLevel, onCheckedChange: (Boolean) -> Unit) {
                 Surface(
                     modifier = Modifier.size(12.dp),
                     shape = CircleShape,
-                    color = priority.color
+                    color = Color(priority.colorHex)
                 ) {}
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {

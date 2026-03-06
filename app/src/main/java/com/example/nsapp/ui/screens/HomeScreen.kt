@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ChevronRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.nsapp.ui.NotificationViewModel
 
 data class HomeFeature(
     val title: String,
@@ -32,7 +34,7 @@ data class HomeFeature(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
+fun HomeScreen(navController: NavController, viewModel: NotificationViewModel) {
     val features = listOf(
         HomeFeature("Create New", Icons.Default.AddAlert, "create_notification", Color(0xFF6750A4), Color(0xFF9575CD)),
         HomeFeature("Schedule", Icons.Default.Schedule, "schedule_manager", Color(0xFF00796B), Color(0xFF4DB6AC)),
@@ -44,7 +46,7 @@ fun HomeScreen(navController: NavController) {
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("NotifySync", fontWeight = FontWeight.ExtraBold) },
+                title = { Text("NotifySync", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
@@ -60,7 +62,7 @@ fun HomeScreen(navController: NavController) {
                 .padding(16.dp)
         ) {
             Text(
-                text = "Welcome Back!",
+                text = "Welcome Back, ${viewModel.userName}!",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onBackground
@@ -122,7 +124,7 @@ fun EnhancedFeatureCard(feature: HomeFeature, onClick: () -> Unit) {
             )
             
             Icon(
-                imageVector = Icons.Default.ChevronRight,
+                imageVector = Icons.AutoMirrored.Filled.ChevronRight,
                 contentDescription = null,
                 modifier = Modifier.align(Alignment.BottomEnd),
                 tint = Color.White.copy(alpha = 0.7f)

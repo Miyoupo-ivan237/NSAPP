@@ -28,12 +28,14 @@ private val DarkColorScheme = darkColorScheme(
     onTertiary = OnTertiary,
     tertiaryContainer = TertiaryContainer,
     onTertiaryContainer = OnTertiaryContainer,
-    background = Background,
-    onBackground = OnBackground,
-    surface = Surface,
-    onSurface = OnSurface,
+    background = PureBlack, // True Black background
+    surface = PureBlack,
+    onBackground = PureWhite,
+    onSurface = PureWhite,
     error = Error,
-    onError = OnError
+    onError = OnError,
+    surfaceVariant = DarkSurface,
+    onSurfaceVariant = PureWhite
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -49,19 +51,21 @@ private val LightColorScheme = lightColorScheme(
     onTertiary = OnTertiary,
     tertiaryContainer = TertiaryContainer,
     onTertiaryContainer = OnTertiaryContainer,
-    background = Background,
-    onBackground = OnBackground,
-    surface = Surface,
-    onSurface = OnSurface,
+    background = PureWhite, // Clean White background
+    surface = PureWhite,
+    onBackground = PureBlack,
+    onSurface = PureBlack,
     error = Error,
-    onError = OnError
+    onError = OnError,
+    surfaceVariant = LightSurface,
+    onSurfaceVariant = PureBlack
 )
 
 @Composable
 fun NSAPPTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false, // Set to false to prioritize our black/white scheme
     content: @Composable () -> Unit
 ) {
     val colorScheme = when {
@@ -77,7 +81,7 @@ fun NSAPPTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            window.statusBarColor = colorScheme.background.toArgb()
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }

@@ -17,10 +17,13 @@ val OnTertiary = Color(0xFFFFFFFF)
 val TertiaryContainer = Color(0xFFFFD8E4)
 val OnTertiaryContainer = Color(0xFF31111D)
 
-val Background = Color(0xFFFFFBFE)
-val OnBackground = Color(0xFF1C1B1F)
-val Surface = Color(0xFFFFFBFE)
-val OnSurface = Color(0xFF1C1B1F)
+// Pure White for Light Mode
+val PureWhite = Color(0xFFFFFFFF)
+val LightSurface = Color(0xFFFAFAFA)
+
+// Pure Black for Dark Mode
+val PureBlack = Color(0xFF000000)
+val DarkSurface = Color(0xFF121212)
 
 val Error = Color(0xFFB3261E)
 val OnError = Color(0xFFFFFFFF)

@@ -3,7 +3,9 @@ package com.example.nsapp.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
@@ -18,14 +20,25 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import android.util.Patterns
+import com.example.nsapp.ui.NotificationViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SignUpScreen(navController: NavController) {
+fun SignUpScreen(navController: NavController, viewModel: NotificationViewModel) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
+    fun validateEmail(email: String): Boolean {
+        return Patterns.EMAIL_ADDRESS.matcher(email).matches() || (email.contains("@") && email.contains("."))
+    }
 
     Box(
         modifier = Modifier
@@ -36,7 +49,8 @@ fun SignUpScreen(navController: NavController) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp),
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
@@ -47,7 +61,7 @@ fun SignUpScreen(navController: NavController) {
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
-                text = "Join us to start scheduling",
+                text = "Join NotifySync today",
                 fontSize = 16.sp,
                 color = MaterialTheme.colorScheme.secondary,
                 modifier = Modifier.padding(bottom = 32.dp)
@@ -55,8 +69,10 @@ fun SignUpScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { name = it; nameError = null },
                 label = { Text("Full Name") },
+                isError = nameError != null,
+                supportingText = { nameError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -66,8 +82,11 @@ fun SignUpScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = email,
-                onValueChange = { email = it },
+                onValueChange = { email = it; emailError = null },
                 label = { Text("Email Address") },
+                placeholder = { Text("exp.@gmail.com") },
+                isError = emailError != null,
+                supportingText = { emailError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp)
@@ -77,8 +96,10 @@ fun SignUpScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = password,
-                onValueChange = { password = it },
+                onValueChange = { password = it; passwordError = null },
                 label = { Text("Password") },
+                isError = passwordError != null,
+                supportingText = { passwordError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -89,8 +110,10 @@ fun SignUpScreen(navController: NavController) {
 
             OutlinedTextField(
                 value = confirmPassword,
-                onValueChange = { confirmPassword = it },
+                onValueChange = { confirmPassword = it; confirmPasswordError = null },
                 label = { Text("Confirm Password") },
+                isError = confirmPasswordError != null,
+                supportingText = { confirmPasswordError?.let { Text(it) } },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -100,29 +123,31 @@ fun SignUpScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
-                onClick = { navController.navigate("home") {
-                    popUpTo("signup") { inclusive = true }
-                } },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                onClick = { 
+                    if (name.isBlank()) nameError = "Please enter your name"
+                    else if (!validateEmail(email)) emailError = "Invalid email format"
+                    else if (password.length < 6) passwordError = "Min 6 characters required"
+                    else if (password != confirmPassword) confirmPasswordError = "Passwords must match"
+                    else {
+                        // Register and Auto-Login
+                        viewModel.userName = name
+                        viewModel.userEmail = email
+                        viewModel.userPassword = password
+                        viewModel.isLoggedIn = true
+                        
+                        navController.navigate("home") {
+                            popUpTo("signup") { inclusive = true }
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Text("Sign Up", fontSize = 18.sp, fontWeight = FontWeight.Bold)
             }
 
-            Row(
-                modifier = Modifier.padding(top = 24.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Already have an account? ")
-                Text(
-                    text = "Login",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { navController.navigate("login") }
-                )
+            TextButton(onClick = { navController.navigate("login") }) {
+                Text("Already have an account? Login")
             }
         }
     }

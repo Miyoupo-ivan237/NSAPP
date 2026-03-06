@@ -14,21 +14,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
-data class ScheduledTask(val id: Int, val time: String, val title: String, val date: String, val priority: String)
+import com.example.nsapp.ui.NotificationViewModel
+import com.example.nsapp.ui.AppNotification
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ScheduleManagerScreen(navController: NavController) {
-    val tasks = listOf(
-        ScheduledTask(1, "08:00 AM", "Morning Review", "Oct 24, 2023", "High"),
-        ScheduledTask(2, "01:30 PM", "Lunch Break", "Oct 24, 2023", "Normal"),
-        ScheduledTask(3, "06:00 PM", "Evening Checkup", "Oct 24, 2023", "Low")
-    )
+fun ScheduleManagerScreen(navController: NavController, viewModel: NotificationViewModel) {
+    val pendingTasks = viewModel.getPendingNotifications()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -66,11 +64,19 @@ fun ScheduleManagerScreen(navController: NavController) {
                 modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(tasks) { task ->
-                    EnhancedTaskItem(task)
+            if (pendingTasks.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("No scheduled notifications", color = MaterialTheme.colorScheme.outline)
+                }
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(pendingTasks) { task ->
+                        EnhancedTaskItem(task) {
+                            viewModel.deleteNotification(task.id, context)
+                        }
+                    }
                 }
             }
         }
@@ -78,7 +84,7 @@ fun ScheduleManagerScreen(navController: NavController) {
 }
 
 @Composable
-fun EnhancedTaskItem(task: ScheduledTask) {
+fun EnhancedTaskItem(task: AppNotification, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -122,7 +128,7 @@ fun EnhancedTaskItem(task: ScheduledTask) {
                         color = Color.White
                     )
                 }
-                IconButton(onClick = { /* Delete task */ }) {
+                IconButton(onClick = onDelete) {
                     Icon(Icons.Default.Delete, contentDescription = "Delete", tint = MaterialTheme.colorScheme.error)
                 }
             }
@@ -132,7 +138,8 @@ fun EnhancedTaskItem(task: ScheduledTask) {
 
 fun getPriorityColor(priority: String): Color {
     return when (priority) {
-        "High" -> Color(0xFFD32F2F)
+        "Urgent" -> Color(0xFFD32F2F)
+        "High" -> Color(0xFFF57C00)
         "Normal" -> Color(0xFF1976D2)
         else -> Color(0xFF388E3C)
     }
