@@ -15,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -26,6 +27,7 @@ import com.example.nsapp.ui.NotificationViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(navController: NavController, viewModel: NotificationViewModel) {
+    val context = LocalContext.current
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -129,11 +131,15 @@ fun SignUpScreen(navController: NavController, viewModel: NotificationViewModel)
                     else if (password.length < 6) passwordError = "Min 6 characters required"
                     else if (password != confirmPassword) confirmPasswordError = "Passwords must match"
                     else {
-                        // Register and Auto-Login
+                        // Register, Save Time, and Schedule Daily Reminder
                         viewModel.userName = name
                         viewModel.userEmail = email
                         viewModel.userPassword = password
                         viewModel.isLoggedIn = true
+                        viewModel.registrationTimeInMillis = System.currentTimeMillis()
+                        
+                        // Start the automatic daily alert
+                        viewModel.scheduleDailyReminder(context)
                         
                         navController.navigate("home") {
                             popUpTo("signup") { inclusive = true }
