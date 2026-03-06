@@ -8,7 +8,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -38,7 +38,7 @@ fun HomeScreen(navController: NavController, viewModel: NotificationViewModel) {
     val features = listOf(
         HomeFeature("Create New", Icons.Default.AddAlert, "create_notification", Color(0xFF6750A4), Color(0xFF9575CD)),
         HomeFeature("Schedule", Icons.Default.Schedule, "schedule_manager", Color(0xFF00796B), Color(0xFF4DB6AC)),
-        HomeFeature("History", Icons.Default.List, "notification_list", Color(0xFFC2185B), Color(0xFFF06292)),
+        HomeFeature("History", Icons.AutoMirrored.Filled.List, "notification_list", Color(0xFFC2185B), Color(0xFFF06292)),
         HomeFeature("Priorities", Icons.Default.PriorityHigh, "priority_settings", Color(0xFFE64A19), Color(0xFFFF8A65)),
         HomeFeature("Settings", Icons.Default.Settings, "settings", Color(0xFF455A64), Color(0xFF90A4AE))
     )
@@ -124,7 +124,7 @@ fun EnhancedFeatureCard(feature: HomeFeature, onClick: () -> Unit) {
             )
             
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.ChevronRight,
+                imageVector = Icons.Default.ChevronRight,
                 contentDescription = null,
                 modifier = Modifier.align(Alignment.BottomEnd),
                 tint = Color.White.copy(alpha = 0.7f)
