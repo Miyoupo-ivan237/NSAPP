@@ -10,7 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -21,12 +21,32 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.nsapp.ui.NotificationViewModel
 import com.example.nsapp.ui.AppNotification
+import com.example.nsapp.ui.UiMessage
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScheduleManagerScreen(navController: NavController, viewModel: NotificationViewModel) {
     val pendingTasks = viewModel.getPendingNotifications()
     val context = LocalContext.current
+    var taskToDelete by remember { mutableStateOf<AppNotification?>(null) }
+
+    // Confirmation Dialog
+    if (taskToDelete != null) {
+        AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Confirm Deletion") },
+            text = { Text("Are you sure you want to delete this notification?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    taskToDelete?.let { viewModel.deleteNotification(it.id, context) }
+                    taskToDelete = null
+                }) { Text("Delete", color = Color.Red) }
+            },
+            dismissButton = {
+                TextButton(onClick = { taskToDelete = null }) { Text("Cancel") }
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -49,34 +69,45 @@ fun ScheduleManagerScreen(navController: NavController, viewModel: NotificationV
             }
         }
     ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .background(MaterialTheme.colorScheme.background)
-                .padding(16.dp)
-        ) {
-            Text(
-                text = "Upcoming Notifications",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Upcoming Notifications",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
 
-            if (pendingTasks.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("No scheduled notifications", color = MaterialTheme.colorScheme.outline)
-                }
-            } else {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(pendingTasks) { task ->
-                        EnhancedTaskItem(task) {
-                            viewModel.deleteNotification(task.id, context)
+                if (pendingTasks.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No scheduled notifications", color = MaterialTheme.colorScheme.outline)
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(pendingTasks) { task ->
+                            EnhancedTaskItem(task) {
+                                taskToDelete = task
+                            }
                         }
                     }
+                }
+            }
+
+            // UI Feedback Popup
+            viewModel.uiMessage?.let { msg ->
+                Snackbar(
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(16.dp),
+                    containerColor = if (msg is UiMessage.Success) Color(0xFF388E3C) else Color.Red
+                ) {
+                    Text(text = if (msg is UiMessage.Success) msg.message else (msg as UiMessage.Error).message)
                 }
             }
         }

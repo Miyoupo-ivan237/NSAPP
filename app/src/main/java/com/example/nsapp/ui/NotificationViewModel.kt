@@ -11,6 +11,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.nsapp.data.AppDatabase
 import com.example.nsapp.data.NotificationEntity
 import com.example.nsapp.utils.NotificationReceiver
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.*
 
@@ -32,12 +33,20 @@ data class PriorityLevelState(
     var isEnabled: Boolean
 )
 
+sealed class UiMessage {
+    data class Success(val message: String) : UiMessage()
+    data class Error(val message: String) : UiMessage()
+}
+
 class NotificationViewModel(application: Application) : AndroidViewModel(application) {
     private val db = AppDatabase.getDatabase(application)
     private val dao = db.notificationDao()
 
     private val _notifications = mutableStateListOf<AppNotification>()
     val notifications: List<AppNotification> get() = _notifications
+
+    var uiMessage by mutableStateOf<UiMessage?>(null)
+        private set
 
     // Auth and Session State
     var isLoggedIn by mutableStateOf(false)
@@ -59,20 +68,65 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     )
 
     init {
-        // Load notifications from database on startup
         viewModelScope.launch {
             dao.getAllNotifications().collect { entities ->
                 _notifications.clear()
-                _notifications.addAll(entities.map { it.toAppNotification() })
+                val currentList = entities.map { it.toAppNotification() }
+                
+                // Automatically move expired notifications to history
+                val now = System.currentTimeMillis()
+                currentList.forEach { notification ->
+                    if (!notification.isSent && notification.triggerTimeMs < now) {
+                        updateNotificationStatus(notification.id, true)
+                    }
+                }
+                _notifications.addAll(currentList)
             }
         }
     }
 
+    fun clearUiMessage() {
+        uiMessage = null
+    }
+
+    private fun showMessage(message: UiMessage) {
+        viewModelScope.launch {
+            uiMessage = message
+            delay(3000)
+            if (uiMessage == message) uiMessage = null
+        }
+    }
+
+    fun checkOverlap(newTimeMs: Long): Boolean {
+        // Consider a conflict if within 1 minute of another notification
+        val buffer = 60000L 
+        return _notifications.any { !it.isSent && Math.abs(it.triggerTimeMs - newTimeMs) < buffer }
+    }
+
     fun addNotification(notification: AppNotification, context: Context) {
-        if (areNotificationsEnabled) {
-            viewModelScope.launch {
-                dao.insertNotification(notification.toEntity())
-                scheduleSystemAlert(notification, context)
+        if (!areNotificationsEnabled) {
+            showMessage(UiMessage.Error("Notifications are disabled in settings"))
+            return
+        }
+
+        if (checkOverlap(notification.triggerTimeMs)) {
+            showMessage(UiMessage.Error("This notification conflicts with another scheduled task"))
+            return
+        }
+
+        viewModelScope.launch {
+            dao.insertNotification(notification.toEntity())
+            scheduleSystemAlert(notification, context)
+            showMessage(UiMessage.Success("Notification created successfully"))
+        }
+    }
+
+    fun updateNotificationStatus(notificationId: String, isSent: Boolean) {
+        viewModelScope.launch {
+            val notification = _notifications.find { it.id == notificationId }
+            notification?.let {
+                val updated = it.copy(isSent = isSent)
+                dao.insertNotification(updated.toEntity())
             }
         }
     }
@@ -104,6 +158,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
             viewModelScope.launch {
                 cancelAlarm(it, context)
                 dao.deleteById(it.id)
+                showMessage(UiMessage.Success("Notification deleted successfully"))
             }
         }
     }
@@ -128,6 +183,7 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
     }
 
     fun getPendingNotifications() = _notifications.filter { !it.isSent }
+    fun getSentNotifications() = _notifications.filter { it.isSent }
 
     fun scheduleDailyReminder(context: Context) {
         if (registrationTimeInMillis == 0L) return
@@ -142,7 +198,6 @@ class NotificationViewModel(application: Application) : AndroidViewModel(applica
 
     fun logout() { isLoggedIn = false }
 
-    // Mapper functions
     private fun NotificationEntity.toAppNotification() = AppNotification(id, title, message, time, date, priority, triggerTimeMs, isSent)
     private fun AppNotification.toEntity() = NotificationEntity(id, title, message, time, date, priority, triggerTimeMs, isSent)
 }
